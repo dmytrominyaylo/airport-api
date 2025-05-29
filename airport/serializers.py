@@ -1,6 +1,6 @@
 from django.db import transaction
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from user.serializers import UserSerializer
 from airport.models import (
     Airport,
     Route,
@@ -28,6 +28,17 @@ class RouteSerializer(serializers.ModelSerializer):
         fields = ["id", "source", "destination", "distance"]
 
 
+class RouteCreateUpdateSerializer(serializers.ModelSerializer):
+    source = serializers.PrimaryKeyRelatedField(queryset=Airport.objects.all())
+    destination = serializers.PrimaryKeyRelatedField(
+        queryset=Airport.objects.all()
+    )
+
+    class Meta:
+        model = Route
+        fields = ["id", "source", "destination", "distance"]
+
+
 class AirplaneTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = AirplaneType
@@ -42,16 +53,20 @@ class AirplaneSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "rows", "seats_in_row", "airplane_type"]
 
 
+class AirplaneCreateUpdateSerializer(serializers.ModelSerializer):
+    airplane_type = serializers.PrimaryKeyRelatedField(
+        queryset=AirplaneType.objects.all()
+    )
+
+    class Meta:
+        model = Airplane
+        fields = ["id", "name", "rows", "seats_in_row", "airplane_type"]
+
+
 class CrewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crew
         fields = ["id", "first_name", "last_name"]
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ["id", "username", "email"]
 
 
 class FlightListSerializer(serializers.ModelSerializer):
@@ -61,9 +76,9 @@ class FlightListSerializer(serializers.ModelSerializer):
 
 
 class FlightDetailSerializer(serializers.ModelSerializer):
-    route = RouteSerializer()
-    airplane = AirplaneSerializer()
-    crew = CrewSerializer(many=True)
+    route = RouteSerializer(read_only=True)
+    airplane = AirplaneSerializer(read_only=True)
+    crew = CrewSerializer(read_only=True, many=True)
 
     class Meta:
         model = Flight
@@ -75,6 +90,15 @@ class FlightDetailSerializer(serializers.ModelSerializer):
 
 
 class FlightCreateUpdateSerializer(serializers.ModelSerializer):
+    route = serializers.PrimaryKeyRelatedField(queryset=Route.objects.all())
+    airplane = serializers.PrimaryKeyRelatedField(
+        queryset=Airplane.objects.all()
+    )
+    crew = serializers.PrimaryKeyRelatedField(
+        queryset=Crew.objects.all(),
+        many=True
+    )
+
     class Meta:
         model = Flight
         fields = [
@@ -89,7 +113,7 @@ class TicketListSerializer(serializers.ModelSerializer):
 
 
 class TicketDetailSerializer(serializers.ModelSerializer):
-    flight = FlightDetailSerializer()
+    flight = FlightDetailSerializer(read_only=True)
     order = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -98,6 +122,9 @@ class TicketDetailSerializer(serializers.ModelSerializer):
 
 
 class TicketCreateUpdateSerializer(serializers.ModelSerializer):
+    flight = serializers.PrimaryKeyRelatedField(queryset=Flight.objects.all())
+    order = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all())
+
     class Meta:
         model = Ticket
         fields = ["row", "seat", "flight", "order"]
@@ -128,8 +155,8 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    tickets = TicketListSerializer(many=True)
+    user = UserSerializer(read_only=True)
+    tickets = TicketListSerializer(read_only=True, many=True)
 
     class Meta:
         model = Order
