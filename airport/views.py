@@ -1,7 +1,7 @@
 from datetime import datetime
 from django.db.models import Count, F
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
@@ -22,6 +22,7 @@ from airport.serializers import (
     RouteSerializer,
     AirplaneTypeSerializer,
     AirplaneSerializer,
+    AirplaneImageSerializer,
     CrewSerializer,
     FlightListSerializer,
     FlightDetailSerializer,
@@ -33,6 +34,22 @@ from airport.serializers import (
     OrderDetailSerializer,
     OrderCreateUpdateSerializer,
 )
+
+
+class UploadImageMixin:
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="upload-image",
+        permission_classes=[IsAdminUser]
+    )
+    def upload_image(self, request, pk=None):
+        obj = self.get_object()
+        serializer = self.get_serializer(obj, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AirportViewSet(viewsets.ModelViewSet):
@@ -57,6 +74,11 @@ class AirplaneViewSet(viewsets.ModelViewSet):
     queryset = Airplane.objects.select_related("airplane_type")
     serializer_class = AirplaneSerializer
     permission_classes = [IsAdminUser]
+
+    def get_serializer_class(self):
+        if self.action == "upload_image":
+            return AirplaneImageSerializer
+        return AirplaneSerializer
 
 
 class CrewViewSet(viewsets.ModelViewSet):
